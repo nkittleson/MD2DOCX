@@ -18,31 +18,30 @@ class MDDocxConverter {
     initializeElements() {
         this.dropZone = document.getElementById('dropZone');
         this.fileInput = document.getElementById('fileInput');
-        this.selectBtn = document.getElementById('selectBtn');
         this.convertBtn = document.getElementById('convertBtn');
         this.fileList = document.getElementById('fileList');
-        this.progressSection = document.getElementById('progressSection');
+        this.progressBar = document.getElementById('progressBar');
         this.progressFill = document.getElementById('progressFill');
-        this.progressText = document.getElementById('progressText');
-        this.resultsSection = document.getElementById('resultsSection');
-        this.downloadLinks = document.getElementById('downloadLinks');
+        this.results = document.getElementById('results');
+        this.resultsList = document.getElementById('resultsList');
     }
 
     setupEventListeners() {
-        // Conversion mode toggle
-        document.querySelectorAll('input[name="conversion"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                this.conversionMode = e.target.value;
+        // Mode toggle buttons
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Remove active from all buttons
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                // Add active to clicked button
+                e.target.classList.add('active');
+                
+                this.conversionMode = e.target.dataset.mode;
                 this.updateFileAccept();
                 this.clearFiles();
             });
         });
 
         // File selection
-        this.selectBtn.addEventListener('click', () => {
-            this.fileInput.click();
-        });
-
         this.fileInput.addEventListener('change', (e) => {
             this.handleFiles(Array.from(e.target.files));
         });
@@ -80,7 +79,7 @@ class MDDocxConverter {
         const validFiles = files.filter(file => this.isValidFile(file));
         
         if (validFiles.length === 0) {
-            this.showMessage('Please select valid files for conversion.', 'error');
+            this.showNotification('Please select valid files for conversion.', 'error');
             return;
         }
 
@@ -163,10 +162,7 @@ class MDDocxConverter {
 
     updateConvertButton() {
         this.convertBtn.disabled = this.files.length === 0;
-        
-        // Reset button appearance when files change
-        this.convertBtn.style.background = '';
-        this.convertBtn.querySelector('.btn-text').textContent = 'Convert Files';
+        this.convertBtn.textContent = 'Convert Files';
     }
 
     clearFiles() {
@@ -181,13 +177,14 @@ class MDDocxConverter {
 
         this.showProgress();
         this.convertBtn.disabled = true;
+        this.convertBtn.textContent = 'Converting...';
         
         const results = [];
         
         try {
             for (let i = 0; i < this.files.length; i++) {
                 const file = this.files[i];
-                this.updateProgress((i / this.files.length) * 100, `Converting ${file.name}...`);
+                this.updateProgress((i / this.files.length) * 100);
                 
                 let result;
                 if (this.conversionMode === 'md-to-docx') {
@@ -199,202 +196,138 @@ class MDDocxConverter {
                 results.push(result);
             }
             
-            this.updateProgress(100, '🎉 Conversion complete!');
+            this.updateProgress(100);
             this.showResults(results);
-            
-            // Add a small celebration effect
-            this.convertBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-            this.convertBtn.querySelector('.btn-text').textContent = '✅ Conversion Complete!';
+            this.showNotification(`Successfully converted ${results.length} file${results.length > 1 ? 's' : ''}!`, 'success');
             
         } catch (error) {
             console.error('Conversion error:', error);
-            this.showMessage(`Conversion failed: ${error.message}`, 'error');
+            this.showNotification('Conversion failed. Please try again.', 'error');
         } finally {
             this.hideProgress();
             this.convertBtn.disabled = false;
+            this.convertBtn.textContent = '✅ Conversion Complete!';
         }
     }
 
     async convertMdToDocx(file) {
-        return new Promise(async (resolve, reject) => {
+        const text = await this.readFileAsText(file);
+        const docxBlob = await generateDocx(text);
+        
+        const originalName = file.name.replace(/\.(md|markdown)$/i, '');
+        const fileName = `${originalName}.docx`;
+        
+        return {
+            originalFile: file,
+            fileName: fileName,
+            blob: docxBlob,
+            size: docxBlob.size
+        };
+    }
+
+    async convertDocxToMd(file) {
+        // Placeholder for DOCX to MD conversion
+        // This would require a DOCX parser library
+        throw new Error('DOCX to MD conversion not yet implemented');
+    }
+
+    readFileAsText(file) {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const markdown = e.target.result;
-                    
-                    // Parse markdown into structured elements
-                    const parser = new MarkdownParser();
-                    const elements = parser.parse(markdown);
-                    
-                    // Generate DOCX using our custom generator
-                    const generator = new DocxGenerator();
-                    const blob = await generator.createDocx(elements);
-                    
-                    const filename = file.name.replace(/\.(md|markdown)$/i, '.docx');
-                    
-                    resolve({
-                        filename,
-                        blob,
-                        originalName: file.name
-                    });
-                    
-                } catch (error) {
-                    console.error('MD to DOCX conversion error:', error);
-                    reject(error);
-                }
-            };
-            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = reject;
             reader.readAsText(file);
         });
     }
 
-
-
-    async convertDocxToMd(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const filename = file.name.replace(/\.docx$/i, '.md');
-                    
-                    // For DOCX files, create a placeholder for now
-                    // In a future version, this could use a library like mammoth.js for proper extraction
-                    const markdown = `# Converted from ${file.name}
-
-This is a placeholder conversion from a DOCX file.
-
-**Note:** For full DOCX support, you would need to:
-1. Install mammoth.js library for DOCX text extraction
-2. Implement proper formatting preservation
-3. Handle complex document structures
-
-Current features in MD → DOCX conversion:
-- ✅ Headers (H1-H6)
-- ✅ Bold and italic text
-- ✅ Lists (ordered and unordered)
-- ✅ Code blocks
-- ✅ Tables
-- ✅ Links and images
-- ✅ Proper Word formatting
-
-For now, you can:
-1. Open your DOCX file in Word
-2. Copy the content
-3. Paste it into a Markdown editor
-4. Use this extension to convert the MD back to DOCX`;
-                    
-                    const blob = new Blob([markdown], { type: 'text/markdown' });
-                    
-                    resolve({
-                        filename,
-                        blob,
-                        originalName: file.name
-                    });
-                    
-                } catch (error) {
-                    reject(error);
-                }
-            };
-            reader.onerror = () => reject(new Error('Failed to read file'));
-            reader.readAsArrayBuffer(file);
-        });
-    }
-
     showProgress() {
-        this.progressSection.style.display = 'block';
-        this.resultsSection.style.display = 'none';
+        this.progressBar.style.display = 'block';
+        this.hideResults();
     }
 
     hideProgress() {
-        this.progressSection.style.display = 'none';
+        this.progressBar.style.display = 'none';
     }
 
-    updateProgress(percent, text) {
-        this.progressFill.style.width = percent + '%';
-        this.progressText.textContent = text;
+    updateProgress(percent) {
+        this.progressFill.style.width = `${percent}%`;
     }
 
     showResults(results) {
-        this.downloadLinks.innerHTML = '';
+        this.resultsList.innerHTML = '';
         
         results.forEach((result, index) => {
-            const linkDiv = document.createElement('div');
-            linkDiv.className = 'download-link';
+            const resultItem = document.createElement('div');
+            resultItem.className = 'result-item';
             
-            linkDiv.innerHTML = `
-                <div class="download-info">
-                    <span class="file-icon">${this.getFileIcon(result.filename)}</span>
-                    <div class="file-details">
-                        <div class="file-name">${result.filename}</div>
-                        <div class="file-size">${this.formatFileSize(result.blob.size)}</div>
-                    </div>
+            const icon = this.getFileIcon(result.fileName);
+            const size = this.formatFileSize(result.size);
+            
+            resultItem.innerHTML = `
+                <div class="result-info">
+                    <span class="result-icon">${icon}</span>
+                    <span class="result-name">${result.fileName}</span>
+                    <span class="result-size">${size}</span>
                 </div>
                 <button class="download-btn" data-index="${index}">Download</button>
             `;
             
             // Add download button event listener
-            const downloadBtn = linkDiv.querySelector('.download-btn');
+            const downloadBtn = resultItem.querySelector('.download-btn');
             downloadBtn.addEventListener('click', () => {
-                this.downloadFile(result.filename, index);
+                this.downloadFile(result);
             });
             
-            this.downloadLinks.appendChild(linkDiv);
+            this.resultsList.appendChild(resultItem);
         });
         
-        this.results = results;
-        this.resultsSection.style.display = 'block';
+        this.results.style.display = 'block';
+        this.resultFiles = results;
         
-        // Show success message
-        this.showMessage(`✅ Successfully converted ${results.length} file${results.length > 1 ? 's' : ''}! Download your files below.`, 'success');
-        
-        // Auto-scroll to results with a small delay to ensure the section is visible
+        // Scroll to results
         setTimeout(() => {
-            this.resultsSection.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'nearest' 
-            });
+            this.results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
     }
 
     hideResults() {
-        this.resultsSection.style.display = 'none';
+        this.results.style.display = 'none';
+        this.resultFiles = [];
     }
 
-    downloadFile(filename, index) {
-        const result = this.results[index];
-        if (result) {
-            // Create download link
-            const url = URL.createObjectURL(result.blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
+    downloadFile(result) {
+        const url = URL.createObjectURL(result.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        this.showNotification(`Downloaded ${result.fileName}`, 'success');
     }
 
-    showMessage(message, type = 'info') {
-        // Remove existing messages
-        const existingMessages = document.querySelectorAll('.error-message, .success-message');
-        existingMessages.forEach(msg => msg.remove());
+    showNotification(message, type = 'info') {
+        // Remove existing notifications
+        const existing = document.querySelector('.notification');
+        if (existing) existing.remove();
         
-        const messageDiv = document.createElement('div');
-        messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
-        messageDiv.textContent = message;
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
         
-        const container = document.querySelector('.converter-section');
-        container.insertBefore(messageDiv, container.firstChild);
+        document.body.appendChild(notification);
         
-        // Auto-remove after 5 seconds
         setTimeout(() => {
-            messageDiv.remove();
-        }, 5000);
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
     }
 }
 
-// Initialize the converter when the DOM is loaded
+// Initialize the converter when the popup loads
 document.addEventListener('DOMContentLoaded', () => {
-    window.converter = new MDDocxConverter();
+    new MDDocxConverter();
 }); 

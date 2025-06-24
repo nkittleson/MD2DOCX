@@ -1,0 +1,73 @@
+<!--
+  MD2DOCX - Markdown to Word Converter Chrome Extension
+  Copyright (c) 2025 nkittleson
+  Licensed under the MIT License - see LICENSE file for details
+  
+  Main popup interface for the extension
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD2DOCX Converter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 MD/DOCX Converter</h1>
+            <p>Convert between Markdown and Word documents</p>
+        </header>
+
+        <div class="converter-section">
+            <div class="conversion-toggle">
+                <label class="toggle-label">
+                    <input type="radio" name="conversion" value="md-to-docx" checked>
+                    <span>MD → DOCX</span>
+                </label>
+                <label class="toggle-label">
+                    <input type="radio" name="conversion" value="docx-to-md">
+                    <span>DOCX → MD</span>
+                </label>
+            </div>
+
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-content">
+                    <div class="drop-icon">📁</div>
+                    <h3>Drop your files here</h3>
+                    <p>or</p>
+                    <button class="select-btn" id="selectBtn">Select Files</button>
+                    <input type="file" id="fileInput" multiple accept=".md,.docx" style="display: none;">
+                </div>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="convert-section">
+                <button class="convert-btn" id="convertBtn" disabled>
+                    <span class="btn-text">Convert Files</span>
+                    <span class="btn-loader" style="display: none;">🔄</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="progress-section" id="progressSection" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="progress-text" id="progressText">Converting...</p>
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <h3>✅ Conversion Complete</h3>
+            <div class="download-links" id="downloadLinks"></div>
+        </div>
+    </div>
+
+    <script src="jszip.min.js"></script>
+    <script src="docx-generator.js"></script>
+    <script src="markdown-parser.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html> 

@@ -231,4 +231,13 @@ class DocxGenerator {
 }
 
 // Export for use in the extension
-window.DocxGenerator = DocxGenerator; 
+window.DocxGenerator = DocxGenerator;
+
+// Global wrapper function for easy access
+async function generateDocx(markdownContent) {
+    const parser = new MarkdownParser();
+    const elements = parser.parse(markdownContent);
+    
+    const generator = new DocxGenerator();
+    return await generator.createDocx(elements);
+} 

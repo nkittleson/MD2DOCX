@@ -18,6 +18,7 @@ class MDDocxConverter {
     initializeElements() {
         this.dropZone = document.getElementById('dropZone');
         this.fileInput = document.getElementById('fileInput');
+        this.selectBtn = document.getElementById('selectBtn');
         this.convertBtn = document.getElementById('convertBtn');
         this.fileList = document.getElementById('fileList');
         this.progressBar = document.getElementById('progressBar');
@@ -42,6 +43,10 @@ class MDDocxConverter {
         });
 
         // File selection
+        this.selectBtn.addEventListener('click', () => {
+            this.fileInput.click();
+        });
+        
         this.fileInput.addEventListener('change', (e) => {
             this.handleFiles(Array.from(e.target.files));
         });

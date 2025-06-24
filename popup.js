@@ -163,6 +163,10 @@ class MDDocxConverter {
 
     updateConvertButton() {
         this.convertBtn.disabled = this.files.length === 0;
+        
+        // Reset button appearance when files change
+        this.convertBtn.style.background = '';
+        this.convertBtn.querySelector('.btn-text').textContent = 'Convert Files';
     }
 
     clearFiles() {
@@ -195,8 +199,12 @@ class MDDocxConverter {
                 results.push(result);
             }
             
-            this.updateProgress(100, 'Conversion complete!');
+            this.updateProgress(100, '🎉 Conversion complete!');
             this.showResults(results);
+            
+            // Add a small celebration effect
+            this.convertBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            this.convertBtn.querySelector('.btn-text').textContent = '✅ Conversion Complete!';
             
         } catch (error) {
             console.error('Conversion error:', error);
@@ -335,6 +343,17 @@ For now, you can:
         
         this.results = results;
         this.resultsSection.style.display = 'block';
+        
+        // Show success message
+        this.showMessage(`✅ Successfully converted ${results.length} file${results.length > 1 ? 's' : ''}! Download your files below.`, 'success');
+        
+        // Auto-scroll to results with a small delay to ensure the section is visible
+        setTimeout(() => {
+            this.resultsSection.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'nearest' 
+            });
+        }, 100);
     }
 
     hideResults() {
